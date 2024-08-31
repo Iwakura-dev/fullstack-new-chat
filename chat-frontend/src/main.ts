@@ -1,11 +1,40 @@
-import './assets/main.css'
+import { createApp } from 'vue';
+import App from './App.vue';
+import { ApolloClient, InMemoryCache, split, HttpLink } from '@apollo/client/core';
+import { WebSocketLink } from '@apollo/client/link/ws';
+import { getMainDefinition } from '@apollo/client/utilities';
+import { DefaultApolloClient } from '@vue/apollo-composable';
 
-import { createApp } from 'vue'
-import App from './App.vue'
-import router from './router'
+const httpLink = new HttpLink({
+  uri: 'http://localhost:3000/graphql',
+});
 
-const app = createApp(App)
+const wsLink = new WebSocketLink({
+  uri: 'ws://localhost:3000/graphql',
+  options: {
+    reconnect: true,
+  },
+});
 
-app.use(router)
+const splitLink = split(
+  ({ query }) => {
+    const definition = getMainDefinition(query);
+    return (
+      definition.kind === 'OperationDefinition' &&
+      definition.operation === 'subscription'
+    );
+  },
+  wsLink,
+  httpLink,
+);
 
-app.mount('#app')
+const apolloClient = new ApolloClient({
+  link: splitLink,
+  cache: new InMemoryCache(),
+});
+
+const app = createApp(App);
+
+app.provide(DefaultApolloClient, apolloClient);
+
+app.mount('#app');

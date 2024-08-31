@@ -13,6 +13,11 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@apollo/client": "^3.11.5",
+    "@vue/apollo-composable": "^4.2.1",
+    "@vue/apollo-option": "^4.2.0",
+    "graphql": "^16.9.0",
+    "subscriptions-transport-ws": "^0.11.0",
     "vue": "^3.4.29",
     "vue-router": "^4.3.3"
   },

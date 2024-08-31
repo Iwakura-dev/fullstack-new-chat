@@ -1,26 +1,29 @@
 import { Injectable } from '@nestjs/common';
-import { CreateChatInput } from './dto/create-chat.input';
-import { UpdateChatInput } from './dto/update-chat.input';
+import { OpenAI } from '@langchain/openai';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ChatService {
-  create(createChatInput: CreateChatInput) {
-    return 'This action adds a new chat';
+  private openai: OpenAI;
+
+  constructor(private configService: ConfigService) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OpenAI API key is not defined');
+    }
+    this.openai = new OpenAI({
+      openAIApiKey: apiKey,
+      streaming: true,
+    });
   }
 
-  findAll() {
-    return `This action returns all chat`;
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} chat`;
-  }
-
-  update(id: number, updateChatInput: UpdateChatInput) {
-    return `This action updates a #${id} chat`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} chat`;
+  async processMessage(content: string): Promise<string> {
+    try {
+      const response = await this.openai.call(content);
+      return response;
+    } catch (error) {
+      console.error('Error processing message:', error.message);
+      throw new Error('Error processing message: ' + error.message);
+    }
   }
 }

@@ -1,35 +1,26 @@
-import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
+import { Resolver, Mutation, Args, Subscription } from '@nestjs/graphql';
+import { PubSub } from 'graphql-subscriptions';
 import { ChatService } from './chat.service';
-import { Chat } from './entities/chat.entity';
-import { CreateChatInput } from './dto/create-chat.input';
-import { UpdateChatInput } from './dto/update-chat.input';
+import { MessageInput } from './dto/message.input';
+import { Message } from './models/message.models';
 
-@Resolver(() => Chat)
+const pubSub = new PubSub();
+
+@Resolver()
 export class ChatResolver {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(private chatService: ChatService) { }
 
-  @Mutation(() => Chat)
-  createChat(@Args('createChatInput') createChatInput: CreateChatInput) {
-    return this.chatService.create(createChatInput);
+  @Mutation(() => Boolean)
+  async sendMessage(@Args('messageInput') messageInput: MessageInput): Promise<boolean> {
+    const response = await this.chatService.processMessage(messageInput.content);
+    pubSub.publish('messageReceived', { messageReceived: { content: response } });
+    return true;
   }
 
-  @Query(() => [Chat], { name: 'chat' })
-  findAll() {
-    return this.chatService.findAll();
-  }
-
-  @Query(() => Chat, { name: 'chat' })
-  findOne(@Args('id', { type: () => Int }) id: number) {
-    return this.chatService.findOne(id);
-  }
-
-  @Mutation(() => Chat)
-  updateChat(@Args('updateChatInput') updateChatInput: UpdateChatInput) {
-    return this.chatService.update(updateChatInput.id, updateChatInput);
-  }
-
-  @Mutation(() => Chat)
-  removeChat(@Args('id', { type: () => Int }) id: number) {
-    return this.chatService.remove(id);
+  @Subscription(() => Message, {
+    resolve: (payload) => payload.messageReceived,
+  })
+  messageReceived() {
+    return pubSub.asyncIterator('messageReceived');
   }
 }
